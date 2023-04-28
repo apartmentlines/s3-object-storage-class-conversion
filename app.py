@@ -53,7 +53,7 @@ class S3StorageChanger:
         print("Getting objects in dir: %s" % directory)
         time.sleep(self.sleep)
         response = self.s3.bucket_list(self.s3_folder_path, prefix=directory, recursive=True)
-        return [item['Key'] for item in response['list']]
+        return [item['Key'] for item in response['list'] if item['StorageClass'] != self.storage_class]
 
     def change_storage_class(self):
         self.create_table()
