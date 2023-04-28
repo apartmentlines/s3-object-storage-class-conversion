@@ -10,13 +10,15 @@ import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
 DEFAULT_STORAGE_CLASS = "GLACIER_IR"
+DEFAULT_TABLE_NAME = "s3_objects"
 DB_NAME = 's3_objects_list.db'
 S3CFG_PATH = os.path.expanduser('~/.s3cfg')
 
 
 class S3StorageChanger:
 
-    def __init__(self, s3_folder_path, storage_class, gather, update, sleep):
+    def __init__(self, table, s3_folder_path, storage_class, gather, update, sleep):
+        self.table = table
         self.s3_folder_path = s3_folder_path
         self.storage_class = storage_class
         self.gather = gather
@@ -27,22 +29,22 @@ class S3StorageChanger:
         self.cur = self.conn.cursor()
 
     def create_table(self):
-        self.conn.execute('''CREATE TABLE IF NOT EXISTS s3_objects
-                            (path TEXT PRIMARY KEY)''')
+        self.conn.execute('''CREATE TABLE IF NOT EXISTS %s
+                            (path TEXT PRIMARY KEY)''' % self.table)
         self.conn.commit()
 
     def insert_s3_object(self, path):
         print("Adding object to cache: %s" % path)
-        self.conn.execute("INSERT INTO s3_objects (path) VALUES (?)", (path,))
+        self.conn.execute("INSERT INTO %s (path) VALUES (?)" % self.table, (path,))
         self.conn.commit()
 
     def delete_s3_object(self, path):
         print("Deleting object from cache: %s" % path)
-        self.conn.execute("DELETE FROM s3_objects WHERE path=?", (path,))
+        self.conn.execute("DELETE FROM %s WHERE path=?" % self.table, (path,))
         self.conn.commit()
 
     def get_s3_objects(self):
-        return self.cur.execute("SELECT * FROM s3_objects")
+        return self.cur.execute("SELECT * FROM %s" % self.table)
 
     def get_top_level_directories(self):
         print("Getting top level dirs in bucket: %s" % self.s3_folder_path)
@@ -85,6 +87,8 @@ class S3StorageChanger:
 def main():
     parser = argparse.ArgumentParser(description="A script to change the storage class of objects in an S3 bucket.")
     parser.add_argument("s3_folder_path", help="S3 folder path for the objects to be updated")
+    parser.add_argument("-t", "--table", default=DEFAULT_TABLE_NAME,
+                        help="Table in the SQLite database to use. Default is %s" % DEFAULT_TABLE_NAME)
     parser.add_argument("-s", "--storage-class", default=DEFAULT_STORAGE_CLASS,
                         help="Desired storage class for the S3 objects. Default is %s" % DEFAULT_STORAGE_CLASS)
     parser.add_argument("--gather", action="store_true",
@@ -98,7 +102,7 @@ def main():
     if args.s3_folder_path is None:
         parser.error("S3 folder path is required")
 
-    s3_storage_changer = S3StorageChanger(args.s3_folder_path, args.storage_class, args.gather, args.update, args.sleep)
+    s3_storage_changer = S3StorageChanger(args.table, args.s3_folder_path, args.storage_class, args.gather, args.update, args.sleep)
     s3_storage_changer.change_storage_class()
 
 
