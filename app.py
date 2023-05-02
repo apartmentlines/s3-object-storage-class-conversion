@@ -4,6 +4,7 @@ import argparse
 import sqlite3
 import os
 import sys
+import datetime
 import traceback
 import time
 import pprint
@@ -83,7 +84,7 @@ class S3StorageChanger:
                     message = "Error changing storage class of %s to %s: %s" % (s3_object_path, self.storage_class, e)
                     print(message)
                     with open(self.error_log, 'a') as f:
-                        f.write(message + "\n")
+                        f.write("%s: %s\n" % (datetime.datetime.now().isoformat(), message))
 
         self.conn.close()
 
