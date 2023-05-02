@@ -83,7 +83,7 @@ class S3StorageChanger:
                     message = "Error changing storage class of %s to %s: %s" % (s3_object_path, self.storage_class, e)
                     print(message)
                     with open(self.error_log, 'a') as f:
-                        f.write(message)
+                        f.write(message + "\n")
 
         self.conn.close()
 
